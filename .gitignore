@@ -1,0 +1,27 @@
+# Environment / secrets
+
+.env
+
+# Learning notes
+
+learn.txt
+
+# Python
+
+**pycache**/
+*.py[cod]
+
+# Virtual environment
+
+.env/
+env/
+
+# IDE
+
+.vscode/
+.idea/
+
+# OS
+
+.DS_Store
+Thumbs.db

@@ -1,0 +1,7 @@
+google-genai
+python-dotenv
+customtkinter
+pyttsx3
+openwakeword
+sounddevice
+numpy
