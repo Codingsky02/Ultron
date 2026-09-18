@@ -12,36 +12,35 @@ class UltronUI:
         self.app = ctk.CTk()
         self.app.title("ULTRON")
 
-        # Fullscreen + no Windows title bar
-        self.app.attributes("-fullscreen", True)
-        self.app.overrideredirect(True)
+        # Normal resizable Windows window
+        self.app.overrideredirect(False)
+        self.app.resizable(True, True)
 
         self.app.configure(fg_color="#050608")
 
         # -------------------------
-        # Screen size
+        # Window size
         # -------------------------
 
-        self.screen_width = self.app.winfo_screenwidth()
-        self.screen_height = self.app.winfo_screenheight()
+        screen_width = self.app.winfo_screenwidth()
+        screen_height = self.app.winfo_screenheight()
 
-        # Design reference: 1920x1080
-        base_width = 1920
-        base_height = 1080
+        window_width = int(screen_width * 0.9)
+        window_height = int(screen_height * 0.9)
 
-        scale_x = self.screen_width / base_width
-        scale_y = self.screen_height / base_height
+        self.app.geometry(
+            f"{window_width}x{window_height}"
+        )
 
-        # Preserve proportions
-        self.scale = min(scale_x, scale_y)
+        # Minimum usable size
+        self.app.minsize(700, 600)
 
-        # Prevent UI becoming ridiculously small/large
-        self.scale = max(0.65, min(self.scale, 1.5))
+        # -------------------------
+        # Design reference
+        # -------------------------
 
-        def scale(value):
-            return max(1, int(value * self.scale))
-
-        self.s = scale
+        self.base_width = 1920
+        self.base_height = 1080
 
         # -------------------------
         # State
@@ -68,52 +67,34 @@ class UltronUI:
         self.title_label = ctk.CTkLabel(
             self.app,
             text="ULTRON",
-            font=("Arial", self.s(38), "bold"),
+            font=("Arial", 38, "bold"),
             text_color="#E6E6E6"
         )
 
-        self.title_label.pack(
-            pady=(self.s(35), 0)
-        )
+        self.title_label.pack()
 
         self.subtitle = ctk.CTkLabel(
             self.app,
             text="PERSONAL AI SYSTEM",
-            font=("Arial", self.s(14)),
+            font=("Arial", 14),
             text_color="#777777"
         )
 
-        self.subtitle.pack(
-            pady=(self.s(3), self.s(15))
-        )
+        self.subtitle.pack()
 
         # -------------------------
         # Responsive face frame
         # -------------------------
 
-        frame_width = min(
-            int(self.screen_width * 0.75),
-            self.s(760)
-        )
-
-        frame_height = min(
-            int(self.screen_height * 0.60),
-            self.s(650)
-        )
-
         self.face_frame = ctk.CTkFrame(
             self.app,
-            width=frame_width,
-            height=frame_height,
-            corner_radius=self.s(24),
+            corner_radius=24,
             fg_color="#090B0F",
-            border_width=self.s(1),
+            border_width=1,
             border_color="#20242A"
         )
 
-        self.face_frame.pack(
-            pady=self.s(20)
-        )
+        self.face_frame.pack()
 
         self.face_frame.pack_propagate(False)
 
@@ -125,15 +106,12 @@ class UltronUI:
 
             image = Image.open(self.face_path)
 
-            face_size = min(
-                int(frame_width * 0.65),
-                int(frame_height * 0.75)
-            )
+            self.original_face_image = image
 
             self.face_image = ctk.CTkImage(
                 light_image=image,
                 dark_image=image,
-                size=(face_size, face_size)
+                size=(400, 400)
             )
 
             self.face = ctk.CTkLabel(
@@ -153,7 +131,7 @@ class UltronUI:
             self.face = ctk.CTkLabel(
                 self.face_frame,
                 text="Face.png not found",
-                font=("Arial", self.s(22), "bold"),
+                font=("Arial", 22, "bold"),
                 text_color="#555555"
             )
 
@@ -167,14 +145,9 @@ class UltronUI:
         # Scanner
         # -------------------------
 
-        scanner_width = int(
-            frame_width * 0.50
-        )
-
         self.scanner = ctk.CTkFrame(
             self.face_frame,
-            width=scanner_width,
-            height=self.s(2),
+            height=2,
             fg_color="#666666"
         )
 
@@ -193,26 +166,23 @@ class UltronUI:
             fg_color="transparent"
         )
 
-        self.status_frame.pack(
-            pady=(self.s(8), self.s(5))
-        )
+        self.status_frame.pack()
 
         self.status_dot = ctk.CTkLabel(
             self.status_frame,
             text="●",
-            font=("Arial", self.s(18)),
+            font=("Arial", 18),
             text_color="#555555"
         )
 
         self.status_dot.pack(
-            side="left",
-            padx=(0, self.s(8))
+            side="left"
         )
 
         self.status = ctk.CTkLabel(
             self.status_frame,
             text="STANDBY",
-            font=("Arial", self.s(16), "bold"),
+            font=("Arial", 16, "bold"),
             text_color="#888888"
         )
 
@@ -227,12 +197,26 @@ class UltronUI:
         self.command = ctk.CTkLabel(
             self.app,
             text="Waiting for activation...",
-            font=("Arial", self.s(14)),
+            font=("Arial", 14),
             text_color="#555555"
         )
 
-        self.command.pack(
-            pady=self.s(5)
+        self.command.pack()
+
+        # -------------------------
+        # Resize handling
+        # -------------------------
+
+        self.app.bind(
+            "<Configure>",
+            self.on_resize
+        )
+
+        self.resize_job = None
+
+        self.app.after(
+            100,
+            self.update_layout
         )
 
         # -------------------------
@@ -243,12 +227,210 @@ class UltronUI:
         self.animate_pulse()
 
     # ==================================================
+    # Responsive Layout
+    # ==================================================
+
+    def on_resize(self, event):
+
+        # Only respond to the main window
+        if event.widget != self.app:
+            return
+
+        # Avoid running layout hundreds of times
+        if self.resize_job is not None:
+            self.app.after_cancel(self.resize_job)
+
+        self.resize_job = self.app.after(
+            30,
+            self.update_layout
+        )
+
+    # ==================================================
+
+    def update_layout(self):
+
+        self.resize_job = None
+
+        width = self.app.winfo_width()
+        height = self.app.winfo_height()
+
+        if width <= 1 or height <= 1:
+            return
+
+        # -------------------------
+        # Calculate responsive scale
+        # -------------------------
+
+        scale_x = width / self.base_width
+        scale_y = height / self.base_height
+
+        scale = min(
+            scale_x,
+            scale_y
+        )
+
+        # Keep things usable at small sizes
+        scale = max(
+            0.55,
+            min(scale, 1.5)
+        )
+
+        self.scale = scale
+
+        def s(value):
+            return max(
+                1,
+                int(value * self.scale)
+            )
+
+        self.s = s
+
+        # -------------------------
+        # Header
+        # -------------------------
+
+        self.title_label.configure(
+            font=("Arial", s(38), "bold")
+        )
+
+        self.title_label.pack_configure(
+            pady=(s(35), 0)
+        )
+
+        self.subtitle.configure(
+            font=("Arial", s(14))
+        )
+
+        self.subtitle.pack_configure(
+            pady=(s(3), s(15))
+        )
+
+        # -------------------------
+        # Face frame
+        # -------------------------
+
+        available_width = int(width * 0.75)
+        available_height = int(height * 0.60)
+
+        frame_width = min(
+            available_width,
+            s(760)
+        )
+
+        frame_height = min(
+            available_height,
+            s(650)
+        )
+
+        # Prevent the frame from becoming unusable
+        frame_width = max(
+            s(400),
+            frame_width
+        )
+
+        frame_height = max(
+            s(300),
+            frame_height
+        )
+
+        self.face_frame.configure(
+            width=frame_width,
+            height=frame_height,
+            corner_radius=s(24),
+            border_width=s(1)
+        )
+
+        self.face_frame.pack_configure(
+            pady=s(20)
+        )
+
+        # -------------------------
+        # Face image
+        # -------------------------
+
+        if self.face_path.exists():
+
+            face_size = min(
+                int(frame_width * 0.65),
+                int(frame_height * 0.75)
+            )
+
+            face_size = max(
+                s(150),
+                face_size
+            )
+
+            self.face_image.configure(
+                size=(face_size, face_size)
+            )
+
+        else:
+
+            self.face.configure(
+                font=("Arial", s(22), "bold")
+            )
+
+        # -------------------------
+        # Scanner
+        # -------------------------
+
+        scanner_width = int(
+            frame_width * 0.50
+        )
+
+        self.scanner.configure(
+            width=scanner_width,
+            height=s(2)
+        )
+
+        # -------------------------
+        # Status
+        # -------------------------
+
+        self.status_frame.pack_configure(
+            pady=(s(8), s(5))
+        )
+
+        self.status_dot.configure(
+            font=("Arial", s(18))
+        )
+
+        self.status_dot.pack_configure(
+            padx=(0, s(8))
+        )
+
+        self.status.configure(
+            font=("Arial", s(16), "bold")
+        )
+
+        # -------------------------
+        # Activity
+        # -------------------------
+
+        self.command.configure(
+            font=("Arial", s(14))
+        )
+
+        self.command.pack_configure(
+            pady=s(5)
+        )
+
+        # -------------------------
+        # Keep scanner in place
+        # -------------------------
+
+        self.scanner.place(
+            relx=0.5,
+            rely=self.scan_position / 100,
+            anchor="center"
+        )
+
+    # ==================================================
     # Show / Hide
     # ==================================================
 
     def show(self):
         self.app.deiconify()
-        self.app.attributes("-fullscreen", True)
         self.app.lift()
         self.app.focus_force()
 
@@ -379,4 +561,3 @@ if __name__ == "__main__":
 
     ui = UltronUI()
     ui.run()
-
