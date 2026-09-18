@@ -12,7 +12,7 @@ class UltronUI:
         self.app = ctk.CTk()
         self.app.title("ULTRON")
 
-        # Normal resizable Windows window
+        # Normal Windows window with title bar
         self.app.overrideredirect(False)
         self.app.resizable(True, True)
 
@@ -22,15 +22,8 @@ class UltronUI:
         # Window size
         # -------------------------
 
-        screen_width = self.app.winfo_screenwidth()
-        screen_height = self.app.winfo_screenheight()
-
-        window_width = int(screen_width * 0.9)
-        window_height = int(screen_height * 0.9)
-
-        self.app.geometry(
-            f"{window_width}x{window_height}"
-        )
+        # Start maximized
+        self.app.state("zoomed")
 
         # Minimum usable size
         self.app.minsize(700, 600)
@@ -430,12 +423,42 @@ class UltronUI:
     # ==================================================
 
     def show(self):
+
+        # Restore Ultron if minimized/hidden
         self.app.deiconify()
+
+        # Maximize the normal Windows window
+        self.app.state("zoomed")
+
+        # Temporarily put Ultron above other windows
+        self.app.attributes(
+            "-topmost",
+            True
+        )
+
+        # Bring Ultron to the front
         self.app.lift()
+
+        # Give Ultron keyboard focus
         self.app.focus_force()
 
+        # Refresh immediately
+        self.app.update_idletasks()
+        self.app.update()
+
+        # Remove topmost after Ultron is brought forward
+        self.app.after(
+            300,
+            lambda: self.app.attributes(
+                "-topmost",
+                False
+            )
+        )
+
     def hide(self):
-        self.app.withdraw()
+
+        # Minimize Ultron instead of destroying the window
+        self.app.iconify()
 
     # ==================================================
     # Scanner animation
@@ -561,3 +584,4 @@ if __name__ == "__main__":
 
     ui = UltronUI()
     ui.run()
+
