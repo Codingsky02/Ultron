@@ -507,7 +507,7 @@ class UltronUI:
             self.animate_pulse
         )
 
-    # ==================================================
+        # ==================================================
     # Backend → UI
     # ==================================================
 
@@ -529,17 +529,27 @@ class UltronUI:
                 text="Listening for command..."
             )
 
-        elif status == "THINKING":
+        elif status == "PROCESSING":
 
             self.status_dot.configure(
                 text_color="#777777"
             )
 
             self.command.configure(
-                text="Processing..."
+                text="Understanding command..."
             )
 
-        elif status == "SPEAKING":
+        elif status == "EXECUTING":
+
+            self.status_dot.configure(
+                text_color="#888888"
+            )
+
+            self.command.configure(
+                text="Executing command..."
+            )
+
+        elif status == "RESPONDING":
 
             self.status_dot.configure(
                 text_color="#999999"
@@ -547,6 +557,28 @@ class UltronUI:
 
             self.command.configure(
                 text="Speaking..."
+            )
+
+        elif status == "SPEAKING":
+
+            # Backward compatibility
+            self.status_dot.configure(
+                text_color="#999999"
+            )
+
+            self.command.configure(
+                text="Speaking..."
+            )
+
+        elif status == "THINKING":
+
+            # Backward compatibility
+            self.status_dot.configure(
+                text_color="#777777"
+            )
+
+            self.command.configure(
+                text="Processing..."
             )
 
         else:
@@ -559,14 +591,7 @@ class UltronUI:
                 text="Waiting for activation..."
             )
 
-    # ==================================================
-    # Activity text
-    # ==================================================
-
-    def set_command(self, text):
-        self.command.configure(
-            text=text
-        )
+    
 
     # ==================================================
     # Start UI

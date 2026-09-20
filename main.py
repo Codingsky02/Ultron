@@ -74,6 +74,12 @@ class Ultron:
 
         self.first_activation = True
 
+        # -------------------------
+        # ULTRON State
+        # -------------------------
+
+        self.state = "STANDBY"
+
     # ==================================================
     # Activation Sound
     # ==================================================
@@ -151,9 +157,8 @@ class Ultron:
 
         self.play_activation_sound()
 
-        self.ui.app.after(
-            0,
-            lambda: self.ui.set_status("SPEAKING")
+        self.set_state(
+            "RESPONDING"
         )
 
         self.speak(
@@ -162,7 +167,9 @@ class Ultron:
 
         elapsed = time.time() - sequence_start
 
-        remaining = ACTIVATION_DURATION - elapsed
+        remaining = (
+            ACTIVATION_DURATION - elapsed
+        )
 
         if remaining > 0:
 
@@ -176,28 +183,74 @@ class Ultron:
         )
 
     # ==================================================
+    # State Management
+    # ==================================================
+
+    def set_state(self, state):
+
+        self.state = state
+
+        print(
+            f"ULTRON STATE → {state}"
+        )
+
+        self.ui.app.after(
+            0,
+            lambda: self.ui.set_status(state)
+        )
+
+    # ==================================================
     # Wake Word Detected
     # ==================================================
 
     def on_wake(self):
 
+        # -------------------------
+        # Ignore wake word while busy
+        # -------------------------
+
+        if self.state != "STANDBY":
+
+            print(
+                f"Wake word ignored — "
+                f"ULTRON is {self.state}"
+            )
+
+            return
+
         print(
             f"ULTRON ACTIVATED — {WAKE_WORD}"
         )
+
+        # -------------------------
+        # Show UI
+        # -------------------------
 
         self.ui.app.after(
             0,
             self.ui.show
         )
 
+        # -------------------------
+        # First activation
+        # -------------------------
+
         if self.first_activation:
 
             self.first_activation = False
+
+            self.set_state(
+                "RESPONDING"
+            )
 
             threading.Thread(
                 target=self.activation_sequence,
                 daemon=True
             ).start()
+
+        # -------------------------
+        # Normal activation
+        # -------------------------
 
         else:
 
@@ -403,12 +456,16 @@ class Ultron:
 
     def listen(self):
 
-        print(
-            "ULTRON IS LISTENING"
+        # -------------------------
+        # Listening State
+        # -------------------------
+
+        self.set_state(
+            "LISTENING"
         )
 
-        self.ui.set_status(
-            "LISTENING"
+        print(
+            "ULTRON IS LISTENING"
         )
 
         # -------------------------
@@ -430,12 +487,16 @@ class Ultron:
             return
 
         # -------------------------
-        # Transcribe
+        # Processing State
         # -------------------------
 
-        self.ui.set_status(
-            "THINKING"
+        self.set_state(
+            "PROCESSING"
         )
+
+        # -------------------------
+        # Transcribe
+        # -------------------------
 
         text = self.ai.transcribe(
             audio_file
@@ -479,8 +540,13 @@ class Ultron:
                 "Gemini could not interpret command."
             )
 
+            self.set_state(
+                "RESPONDING"
+            )
+
             self.speak(
-                "I couldn't understand that command, sir."
+                "I couldn't understand "
+                "that command, sir."
             )
 
             self.standby()
@@ -490,6 +556,10 @@ class Ultron:
         # -------------------------
         # Execute Command
         # -------------------------
+
+        self.set_state(
+            "EXECUTING"
+        )
 
         response = self.execute_command(
             command
@@ -502,11 +572,11 @@ class Ultron:
         print("====================")
 
         # -------------------------
-        # Speak Response
+        # Responding State
         # -------------------------
 
-        self.ui.set_status(
-            "SPEAKING"
+        self.set_state(
+            "RESPONDING"
         )
 
         self.speak(
@@ -525,7 +595,7 @@ class Ultron:
 
     def standby(self):
 
-        self.ui.set_status(
+        self.set_state(
             "STANDBY"
         )
 
@@ -544,7 +614,7 @@ class Ultron:
     def start(self):
 
         print(
-            "ULTRON v1.47"
+            "ULTRON v1.57"
         )
 
         print(
@@ -559,6 +629,10 @@ class Ultron:
 
         self.ui.run()
 
+
+# ==================================================
+# Main
+# ==================================================
 
 if __name__ == "__main__":
 

@@ -29,7 +29,13 @@ class SpeechManager:
         print("LISTENING...")
         print("Speak now...")
 
+        temp_file_path = None
+
         try:
+            # -------------------------
+            # Record microphone
+            # -------------------------
+
             audio = sd.rec(
                 int(duration * self.sample_rate),
                 samplerate=self.sample_rate,
@@ -39,26 +45,54 @@ class SpeechManager:
 
             sd.wait()
 
-            # Temporary WAV file
+            # -------------------------
+            # Create temporary WAV
+            # -------------------------
+
             temp_file = tempfile.NamedTemporaryFile(
                 suffix=".wav",
                 delete=False
             )
 
+            temp_file_path = temp_file.name
             temp_file.close()
 
+            # -------------------------
+            # Save recording
+            # -------------------------
+
             sf.write(
-                temp_file.name,
+                temp_file_path,
                 audio,
                 self.sample_rate
             )
 
-            print(f"Audio recorded: {temp_file.name}")
+            print(
+                f"Audio recorded: {temp_file_path}"
+            )
 
-            return temp_file.name
+            return temp_file_path
 
         except Exception as error:
-            print(f"Microphone error: {error}")
+
+            print(
+                f"Microphone error: {error}"
+            )
+
+            # -------------------------
+            # Cleanup failed recording
+            # -------------------------
+
+            if (
+                temp_file_path
+                and os.path.exists(temp_file_path)
+            ):
+                try:
+                    os.remove(temp_file_path)
+
+                except OSError:
+                    pass
+
             return None
 
     # ==================================================
@@ -70,13 +104,22 @@ class SpeechManager:
         Delete a temporary audio file.
         """
 
-        if file_path and os.path.exists(file_path):
+        if not file_path:
+            return
 
-            try:
-                os.remove(file_path)
+        if not os.path.exists(file_path):
+            return
 
-            except OSError:
-                pass
+        try:
 
+            os.remove(file_path)
 
+            print(
+                f"Audio cleanup complete: {file_path}"
+            )
 
+        except OSError as error:
+
+            print(
+                f"Audio cleanup error: {error}"
+            )
