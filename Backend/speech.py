@@ -77,3 +77,6 @@ class SpeechManager:
 
             except OSError:
                 pass
+
+
+

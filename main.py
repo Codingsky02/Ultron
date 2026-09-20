@@ -3,7 +3,6 @@ from Backend.wakeword import WakeWordListener
 from Backend.speech import SpeechManager
 from Backend.ai import AIManager
 from Backend.tools import ToolManager
-
 import winsound
 import os
 import subprocess
